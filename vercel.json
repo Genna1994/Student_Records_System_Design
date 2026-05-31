@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/trpc/:path*",
+      "destination": "/api/trpc"
+    }
+  ],
+  "functions": {
+    "functions/trpc.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}
