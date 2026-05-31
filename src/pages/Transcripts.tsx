@@ -5,36 +5,25 @@ import { RollingDigitRoulette } from "@/components/effects/RollingDigitRoulette"
 
 export default function Transcripts() {
   const [searchInput, setSearchInput] = useState("");
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  const { data: transcript, isLoading } = trpc.student.getTranscript.useQuery(
-    { id: selectedId || 0 },
-    { enabled: !!selectedId && selectedId > 0 }
-  );
-
-  const { data: performance } = trpc.analytics.studentPerformance.useQuery(
-    { studentId: selectedId || 0 },
-    { enabled: !!selectedId && selectedId > 0 }
+  const { data: transcript, isLoading } = trpc.student.getTranscriptByStudentId.useQuery(
+    { studentId: selectedStudentId || "" },
+    { enabled: !!selectedStudentId }
   );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = parseInt(searchInput);
-    if (!isNaN(id) && id > 0) {
-      setSelectedId(id);
-    }
+    const val = searchInput.trim();
+    if (val) setSelectedStudentId(val);
   };
 
-  // Check for URL params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const studentIdParam = params.get("studentId");
-    if (studentIdParam) {
-      const id = parseInt(studentIdParam);
-      if (!isNaN(id) && id > 0) {
-        setSelectedId(id);
-        setSearchInput(String(id));
-      }
+    const sid = params.get("studentId");
+    if (sid) {
+      setSelectedStudentId(sid);
+      setSearchInput(sid);
     }
   }, []);
 
@@ -73,13 +62,12 @@ export default function Transcripts() {
         )}
       </div>
 
-      {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#4B5563]" />
           <input
-            type="number"
-            placeholder="Enter Student ID (numeric)..."
+            type="text"
+            placeholder="Enter Student ID (e.g. 15357)..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white font-mono text-xs h-9 pl-7 pr-3 focus:border-[#E5E7EB] focus:outline-none"
@@ -93,7 +81,7 @@ export default function Transcripts() {
         </button>
       </form>
 
-      {!selectedId ? (
+      {!selectedStudentId ? (
         <div className="flex flex-col items-center justify-center py-16 text-[#4B5563]">
           <FileText className="w-12 h-12 mb-4 opacity-20" />
           <p className="font-mono text-xs">ENTER A STUDENT ID TO VIEW TRANSCRIPT</p>
@@ -109,7 +97,6 @@ export default function Transcripts() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Transcript Header */}
           <div className="bg-[#0D0D0D] border border-[#2A2A2A] p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-3">
@@ -136,14 +123,15 @@ export default function Transcripts() {
                   </div>
                 </div>
               </div>
-
               <div className="text-right">
                 <div className="bg-[#1A1A1A] border border-[#2A2A2A] p-4 inline-block">
                   <div className="font-mono text-[10px] text-[#4B5563] uppercase mb-1">Cumulative GPA</div>
                   <div className={`text-3xl font-mono font-bold ${
-                    parseFloat(transcript.summary.gpa || "0") >= 3.5 ? "text-emerald-400"
-                    : parseFloat(transcript.summary.gpa || "0") < 2.0 ? "text-red-400"
-                    : "text-[#9CA3AF]"
+                    parseFloat(transcript.summary.gpa || "0") >= 3.5
+                      ? "text-emerald-400"
+                      : parseFloat(transcript.summary.gpa || "0") < 2.0
+                      ? "text-red-400"
+                      : "text-[#9CA3AF]"
                   }`}>
                     <RollingDigitRoulette value={transcript.summary.gpa || "0.00"} delay={200} />
                   </div>
@@ -151,7 +139,6 @@ export default function Transcripts() {
               </div>
             </div>
 
-            {/* Summary Stats */}
             <div className="grid grid-cols-4 gap-4 mt-6 pt-4 border-t border-[#2A2A2A]">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-400" />
@@ -184,30 +171,6 @@ export default function Transcripts() {
             </div>
           </div>
 
-          {/* GPA by Semester */}
-          {performance && performance.gpaBySemester.length > 0 && (
-            <div className="bg-[#0D0D0D] border border-[#2A2A2A] p-4">
-              <h3 className="font-mono text-xs uppercase tracking-widest text-[#9CA3AF] mb-3">
-                GPA by Semester
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {performance.gpaBySemester.map((sem) => (
-                  <div key={sem.semester} className="bg-[#1A1A1A] p-3">
-                    <div className="font-mono text-[10px] text-[#4B5563]">{sem.semester}</div>
-                    <div className={`font-mono text-lg font-bold ${
-                      parseFloat(sem.semester_gpa) >= 3.5 ? "text-emerald-400"
-                      : parseFloat(sem.semester_gpa) < 2.0 ? "text-red-400"
-                      : "text-[#9CA3AF]"
-                    }`}>
-                      {parseFloat(sem.semester_gpa).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Course List */}
           <div className="bg-[#0D0D0D] border border-[#2A2A2A]">
             <div className="bg-[#1A1A1A] px-4 py-2 flex items-center gap-2">
               <FileText className="w-3 h-3 text-[#4B5563]" />
@@ -215,8 +178,6 @@ export default function Transcripts() {
                 Complete Course History
               </h3>
             </div>
-
-            {/* Table Header */}
             <div className="grid grid-cols-[100px_1fr_80px_100px_80px_80px_80px] px-4 py-2 bg-[#111111]">
               {["CODE", "TITLE", "CREDITS", "SEMESTER", "STATUS", "GRADE", "LETTER"].map((h) => (
                 <span key={h} className="font-mono text-[10px] uppercase tracking-wider text-[#4B5563]">
@@ -224,8 +185,6 @@ export default function Transcripts() {
                 </span>
               ))}
             </div>
-
-            {/* Group by semester */}
             {transcript.courses.length === 0 ? (
               <div className="text-center py-8 text-[#4B5563] font-mono text-xs">
                 NO COURSES ON RECORD
@@ -235,7 +194,7 @@ export default function Transcripts() {
                 {transcript.courses.map((course, idx) => (
                   <div
                     key={course.enrollmentId}
-                    className={`data-row grid grid-cols-[100px_1fr_80px_100px_80px_80px_80px] px-4 py-2.5 items-center ${
+                    className={`grid grid-cols-[100px_1fr_80px_100px_80px_80px_80px] px-4 py-2.5 items-center ${
                       idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"
                     }`}
                   >
@@ -260,13 +219,17 @@ export default function Transcripts() {
             )}
           </div>
 
-          {/* Footer */}
           <div className="text-center py-4 border-t border-[#2A2A2A]">
             <p className="font-mono text-[10px] text-[#4B5563]">
               NEXUS UNIVERSITY RECORDS SYSTEM | OFFICIAL TRANSCRIPT
             </p>
             <p className="font-mono text-[10px] text-[#4B5563] mt-1">
-              Generated on {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              Generated on{" "}
+              {new Date().toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </p>
           </div>
         </div>
