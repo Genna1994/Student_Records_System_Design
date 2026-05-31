@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "../middleware";
 import { getDb } from "../queries/connection";
-import { students, enrollments, courses } from "@db/schema";
+import { students, enrollments, courses } from "../../db/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 
 export const studentRouter = createRouter({
@@ -188,6 +188,56 @@ export const studentRouter = createRouter({
         summary: {
           totalCredits,
           gpa,
+          coursesAttempted: transcriptData.length,
+          coursesCompleted: completedCourses.length,
+        },
+      };
+    }),
+
+  getTranscriptByStudentId: publicQuery
+    .input(z.object({ studentId: z.string() }))
+    .query(async ({ input }) => {
+      const db = getDb();
+      const student = await db
+        .select()
+        .from(students)
+        .where(eq(students.studentId, input.studentId))
+        .limit(1);
+
+      if (!student[0]) return null;
+
+      const transcriptData = await db
+        .select({
+          enrollmentId: enrollments.id,
+          courseId: courses.id,
+          courseCode: courses.courseCode,
+          courseTitle: courses.title,
+          credits: courses.credits,
+          department: courses.department,
+          semester: enrollments.semester,
+          status: enrollments.status,
+          finalGrade: enrollments.finalGrade,
+          enrollmentDate: enrollments.enrollmentDate,
+        })
+        .from(enrollments)
+        .innerJoin(courses, eq(enrollments.courseId, courses.id))
+        .where(eq(enrollments.studentId, student[0].id))
+        .orderBy(desc(enrollments.semester), courses.courseCode);
+
+      const completedCourses = transcriptData.filter(
+        (t) => t.status === "completed" && t.finalGrade
+      );
+      const totalCredits = completedCourses.reduce(
+        (sum, c) => sum + (c.credits || 0),
+        0
+      );
+
+      return {
+        student: student[0],
+        courses: transcriptData,
+        summary: {
+          totalCredits,
+          gpa: student[0].currentGpa,
           coursesAttempted: transcriptData.length,
           coursesCompleted: completedCourses.length,
         },
