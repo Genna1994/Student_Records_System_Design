@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "../middleware";
 import { getDb } from "../queries/connection";
-import { enrollments, courses, students, prerequisites } from "@db/schema";
+import { enrollments, courses, students, prerequisites } from "../../db/schema";
 import { eq, and, count, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
@@ -73,46 +73,48 @@ export const enrollmentRouter = createRouter({
       return { enrollments: results, total, page, limit };
     }),
 
-  enroll: publicQuery
+  enrollByCode: publicQuery
     .input(
       z.object({
-        studentId: z.number(),
-        courseId: z.number(),
+        studentIdCode: z.string().min(1),
+        courseCode: z.string().min(1),
         semester: z.string().min(1),
       })
     )
     .mutation(async ({ input }) => {
       const db = getDb();
 
+      const studentList = await db
+        .select()
+        .from(students)
+        .where(eq(students.studentId, input.studentIdCode))
+        .limit(1);
+
+      if (!studentList[0]) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
+      }
+
+      const courseList = await db
+        .select()
+        .from(courses)
+        .where(eq(courses.courseCode, input.courseCode))
+        .limit(1);
+
+      if (!courseList[0]) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
+      }
+
       return await db.transaction(async (tx) => {
-        // 1. Verify student exists and is active
-        const studentList = await tx
-          .select()
-          .from(students)
-          .where(eq(students.id, input.studentId))
-          .limit(1);
-
-        if (!studentList[0]) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Student not found" });
-        }
-        if (studentList[0].status === "inactive") {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Student is inactive and cannot enroll" });
-        }
-
-        // 2. Verify course exists
-        const courseList = await tx
-          .select()
-          .from(courses)
-          .where(eq(courses.id, input.courseId))
-          .limit(1);
-
-        if (!courseList[0]) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
-        }
-
+        const student = studentList[0];
         const course = courseList[0];
 
-        // 3. RULE 1: Check course capacity
+        if (student.status === "inactive") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Student is inactive and cannot enroll",
+          });
+        }
+
         if (course.currentEnrollment >= course.maxCapacity) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -120,93 +122,72 @@ export const enrollmentRouter = createRouter({
           });
         }
 
-        // 4. Check for duplicate enrollment
-        const existingEnrollment = await tx
+        const existing = await tx
           .select()
           .from(enrollments)
           .where(
             and(
-              eq(enrollments.studentId, input.studentId),
-              eq(enrollments.courseId, input.courseId),
+              eq(enrollments.studentId, student.id),
+              eq(enrollments.courseId, course.id),
               eq(enrollments.semester, input.semester)
             )
           )
           .limit(1);
 
-        if (existingEnrollment[0]) {
+        if (existing[0]) {
           throw new TRPCError({
             code: "CONFLICT",
             message: `Student already enrolled in this course for ${input.semester}`,
           });
         }
 
-        // 5. RULE 2: Check prerequisites
         const prereqList = await tx
           .select({ prereqCourseId: prerequisites.prereqCourseId })
           .from(prerequisites)
-          .where(eq(prerequisites.courseId, input.courseId));
+          .where(eq(prerequisites.courseId, course.id));
 
-        if (prereqList.length > 0) {
-          const prereqIds = prereqList.map((p) => p.prereqCourseId);
-
-          for (const prereqId of prereqIds) {
-            const completedPrereq = await tx
-              .select()
-              .from(enrollments)
-              .where(
-                and(
-                  eq(enrollments.studentId, input.studentId),
-                  eq(enrollments.courseId, prereqId),
-                  eq(enrollments.status, "completed")
-                )
+        for (const prereq of prereqList) {
+          const completed = await tx
+            .select()
+            .from(enrollments)
+            .where(
+              and(
+                eq(enrollments.studentId, student.id),
+                eq(enrollments.courseId, prereq.prereqCourseId),
+                eq(enrollments.status, "completed")
               )
+            )
+            .limit(1);
+
+          if (!completed[0]) {
+            const prereqCourse = await tx
+              .select({ courseCode: courses.courseCode })
+              .from(courses)
+              .where(eq(courses.id, prereq.prereqCourseId))
               .limit(1);
-
-            if (!completedPrereq[0]) {
-              const prereqCourse = await tx
-                .select({ courseCode: courses.courseCode, title: courses.title })
-                .from(courses)
-                .where(eq(courses.id, prereqId))
-                .limit(1);
-
-              const prereqCode = prereqCourse[0]?.courseCode || "Unknown";
-              const prereqTitle = prereqCourse[0]?.title || "";
-
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Prerequisite not met: ${prereqCode} ${prereqTitle ? `- ${prereqTitle}` : ""} must be completed first`,
-              });
-            }
-
-            const grade = parseFloat(completedPrereq[0].finalGrade || "0");
-            if (grade < 60) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `Prerequisite not passed with minimum grade (60%). Current grade: ${grade}%`,
-              });
-            }
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Prerequisite not met: ${prereqCourse[0]?.courseCode || "Unknown"} must be completed first`,
+            });
           }
         }
 
-        // 6. Insert enrollment record
         const result = await tx.insert(enrollments).values({
-          studentId: input.studentId,
-          courseId: input.courseId,
+          studentId: student.id,
+          courseId: course.id,
           semester: input.semester,
           status: "enrolled",
         });
 
-        // 7. Increment course enrollment count
         await tx
           .update(courses)
           .set({ currentEnrollment: course.currentEnrollment + 1 })
-          .where(eq(courses.id, input.courseId));
+          .where(eq(courses.id, course.id));
 
-        const newEnrollmentId = Number(result[0].insertId);
         return {
-          id: newEnrollmentId,
-          studentId: input.studentId,
-          courseId: input.courseId,
+          id: Number(result[0].insertId),
+          studentId: student.id,
+          courseId: course.id,
           semester: input.semester,
           status: "enrolled" as const,
           courseCode: course.courseCode,
@@ -293,7 +274,6 @@ export const enrollmentRouter = createRouter({
           })
           .where(eq(enrollments.id, input.id));
 
-        // Recalculate GPA using raw SQL for aggregate calculation
         const gpaResult = await tx.execute(
           sql`SELECT 
             SUM(
