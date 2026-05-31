@@ -22,7 +22,7 @@ export default function Enrollments() {
     limit: 15,
   });
 
-  const enrollMutation = trpc.enrollment.enroll.useMutation({
+  const enrollByCodeMutation = trpc.enrollment.enrollByCode.useMutation({
     onSuccess: (data) => {
       setSuccessMsg(`Successfully enrolled in ${data.courseCode} - ${data.courseTitle}`);
       setShowEnrollDialog(false);
@@ -65,9 +65,9 @@ export default function Enrollments() {
     setErrorMsg("");
     const form = e.currentTarget;
     const formData = new FormData(form);
-    enrollMutation.mutate({
-      studentId: parseInt(formData.get("studentId") as string),
-      courseId: parseInt(formData.get("courseId") as string),
+    enrollByCodeMutation.mutate({
+      studentIdCode: formData.get("studentIdCode") as string,
+      courseCode: formData.get("courseCode") as string,
       semester: formData.get("semester") as string,
     });
   };
@@ -84,11 +84,35 @@ export default function Enrollments() {
     }
   };
 
+  const totalPages = data ? Math.ceil(data.total / data.limit) : 1;
+
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push("...");
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.push(i);
+      }
+      if (page < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="font-mono text-xl font-bold text-white">ENROLLMENT MANAGEMENT</h1>
-        <Dialog open={showEnrollDialog} onOpenChange={(open) => { setShowEnrollDialog(open); setErrorMsg(""); }}>
+        <Dialog
+          open={showEnrollDialog}
+          onOpenChange={(open) => {
+            setShowEnrollDialog(open);
+            setErrorMsg("");
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="bg-white text-black hover:bg-[#E5E7EB] rounded-none font-mono text-xs h-8">
               <Plus className="w-3 h-3 mr-1" />
@@ -108,18 +132,35 @@ export default function Enrollments() {
               </div>
             )}
             <form onSubmit={handleEnroll} className="space-y-3 mt-2">
-              <Input name="studentId" type="number" placeholder="Student ID (numeric)" required
-                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none" />
-              <Input name="courseId" type="number" placeholder="Course ID (numeric)" required
-                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none" />
-              <Input name="semester" placeholder="Semester (e.g., Fall 2025)" required
-                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none" />
+              <Input
+                name="studentIdCode"
+                type="text"
+                placeholder="Student ID (e.g. 15357)"
+                required
+                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none"
+              />
+              <Input
+                name="courseCode"
+                type="text"
+                placeholder="Course Code (e.g. CS-101)"
+                required
+                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none"
+              />
+              <Input
+                name="semester"
+                placeholder="Semester (e.g. fall 2025)"
+                required
+                className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none"
+              />
               <div className="text-[10px] text-[#4B5563] font-mono">
                 Business Rules: Capacity check + Prerequisite validation (transaction-guarded)
               </div>
-              <Button type="submit" disabled={enrollMutation.isPending}
-                className="w-full bg-white text-black hover:bg-[#E5E7EB] rounded-none font-mono text-xs h-9">
-                {enrollMutation.isPending ? "PROCESSING..." : "ENROLL"}
+              <Button
+                type="submit"
+                disabled={enrollByCodeMutation.isPending}
+                className="w-full bg-white text-black hover:bg-[#E5E7EB] rounded-none font-mono text-xs h-9"
+              >
+                {enrollByCodeMutation.isPending ? "PROCESSING..." : "ENROLL"}
               </Button>
             </form>
           </DialogContent>
@@ -141,13 +182,19 @@ export default function Enrollments() {
             type="text"
             placeholder="Search enrollments..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="bg-[#1A1A1A] border border-[#2A2A2A] text-white font-mono text-xs h-8 pl-7 pr-3 w-56 focus:border-[#E5E7EB] focus:outline-none"
           />
         </div>
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
           className="bg-[#1A1A1A] border border-[#2A2A2A] text-[#9CA3AF] font-mono text-xs h-8 px-3 focus:border-[#E5E7EB] focus:outline-none"
         >
           <option value="">ALL STATUS</option>
@@ -184,29 +231,43 @@ export default function Enrollments() {
                   idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"
                 }`}
               >
-                <Link to={`/students/${enr.studentId}`} className="font-mono text-xs text-blue-400 hover:underline">
+                <Link
+                  to={`/students/${enr.studentId}`}
+                  className="font-mono text-xs text-blue-400 hover:underline"
+                >
                   {enr.studentName} {enr.studentLastName?.[0]}.
                 </Link>
-                <Link to={`/courses/${enr.courseId}`} className="text-xs text-white truncate hover:text-blue-400">
+                <Link
+                  to={`/courses/${enr.courseId}`}
+                  className="text-xs text-white truncate hover:text-blue-400"
+                >
                   <span className="font-mono text-blue-400">{enr.courseCode}</span>{" "}
                   <span className="text-[#4B5563]">{enr.courseTitle}</span>
                 </Link>
                 <span className="font-mono text-xs text-[#9CA3AF]">{enr.semester}</span>
                 <span className="font-mono text-[10px] text-[#4B5563]">
-                  {enr.enrollmentDate ? new Date(enr.enrollmentDate).toLocaleDateString() : "--"}
+                  {enr.enrollmentDate
+                    ? new Date(enr.enrollmentDate).toLocaleDateString()
+                    : "--"}
                 </span>
                 <span>
-                  <span className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-mono status-${enr.status}`}>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] uppercase font-mono status-${enr.status}`}
+                  >
                     {enr.status}
                   </span>
                 </span>
-                <span className={`font-mono text-xs ${
-                  enr.finalGrade
-                    ? parseFloat(enr.finalGrade) >= 90 ? "text-emerald-400"
-                    : parseFloat(enr.finalGrade) >= 70 ? "text-[#9CA3AF]"
-                    : "text-red-400"
-                    : "text-[#4B5563]"
-                }`}>
+                <span
+                  className={`font-mono text-xs ${
+                    enr.finalGrade
+                      ? parseFloat(enr.finalGrade) >= 90
+                        ? "text-emerald-400"
+                        : parseFloat(enr.finalGrade) >= 70
+                        ? "text-[#9CA3AF]"
+                        : "text-red-400"
+                      : "text-[#4B5563]"
+                  }`}
+                >
                   {enr.finalGrade || "--"}
                 </span>
                 <div className="flex items-center gap-1">
@@ -218,7 +279,6 @@ export default function Enrollments() {
                           setShowGradeDialog(true);
                         }}
                         className="px-1.5 py-0.5 text-[9px] font-mono text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/10 transition-colors"
-                        title="Assign Grade"
                       >
                         GRADE
                       </button>
@@ -229,7 +289,6 @@ export default function Enrollments() {
                           }
                         }}
                         className="px-1.5 py-0.5 text-[9px] font-mono text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
-                        title="Drop Course"
                       >
                         DROP
                       </button>
@@ -242,27 +301,61 @@ export default function Enrollments() {
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination with page numbers */}
       {data && data.total > 0 && (
         <div className="flex items-center justify-between">
           <span className="font-mono text-[10px] text-[#4B5563]">
-            {data.total} RECORDS | PAGE {page} OF {Math.ceil(data.total / data.limit)}
+            {data.total} RECORDS | PAGE {page} OF {totalPages}
           </span>
           <div className="flex gap-1">
-            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-              className="w-8 h-8 flex items-center justify-center border border-[#2A2A2A] text-[#9CA3AF] disabled:opacity-30 hover:border-[#4B5563]">
-              <ChevronLeft className="w-3 h-3" />
+            <button
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="w-8 h-8 flex items-center justify-center border border-[#2A2A2A] text-[#9CA3AF] disabled:opacity-30 hover:border-[#4B5563] font-mono text-xs"
+            >
+              {"<"}
             </button>
-            <button onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(data.total / data.limit)}
-              className="w-8 h-8 flex items-center justify-center border border-[#2A2A2A] text-[#9CA3AF] disabled:opacity-30 hover:border-[#4B5563]">
-              <ChevronRight className="w-3 h-3" />
+            {getPageNumbers().map((p, i) =>
+              p === "..." ? (
+                <span
+                  key={`e-${i}`}
+                  className="w-8 h-8 flex items-center justify-center text-[#4B5563] font-mono text-xs"
+                >
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p as number)}
+                  className={`w-8 h-8 flex items-center justify-center border font-mono text-xs transition-colors ${
+                    page === p
+                      ? "border-white bg-white text-black"
+                      : "border-[#2A2A2A] text-[#9CA3AF] hover:border-[#4B5563]"
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages}
+              className="w-8 h-8 flex items-center justify-center border border-[#2A2A2A] text-[#9CA3AF] disabled:opacity-30 hover:border-[#4B5563] font-mono text-xs"
+            >
+              {">"}
             </button>
           </div>
         </div>
       )}
 
       {/* Grade Dialog */}
-      <Dialog open={showGradeDialog} onOpenChange={(open) => { setShowGradeDialog(open); setErrorMsg(""); }}>
+      <Dialog
+        open={showGradeDialog}
+        onOpenChange={(open) => {
+          setShowGradeDialog(open);
+          setErrorMsg("");
+        }}
+      >
         <DialogContent className="bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-none max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-mono text-sm uppercase tracking-widest">
@@ -276,13 +369,24 @@ export default function Enrollments() {
             </div>
           )}
           <form onSubmit={handleGrade} className="space-y-3 mt-2">
-            <Input name="grade" type="number" min="0" max="100" step="0.1" placeholder="Grade (0-100)" required
-              className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none" />
+            <Input
+              name="grade"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              placeholder="Grade (0-100)"
+              required
+              className="bg-[#0D0D0D] border-[#2A2A2A] text-white font-mono text-xs h-9 rounded-none"
+            />
             <div className="text-[10px] text-[#4B5563] font-mono">
-              This will mark the enrollment as completed and recalculate the student&apos;s GPA.
+              This will mark the enrollment as completed and recalculate the student's GPA.
             </div>
-            <Button type="submit" disabled={gradeMutation.isPending}
-              className="w-full bg-white text-black hover:bg-[#E5E7EB] rounded-none font-mono text-xs h-9">
+            <Button
+              type="submit"
+              disabled={gradeMutation.isPending}
+              className="w-full bg-white text-black hover:bg-[#E5E7EB] rounded-none font-mono text-xs h-9"
+            >
               {gradeMutation.isPending ? "UPDATING..." : "ASSIGN GRADE"}
             </Button>
           </form>
