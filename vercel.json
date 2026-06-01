@@ -1,21 +1,15 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "vite build",
   "outputDirectory": "dist",
   "framework": null,
   "functions": {
     "api/trpc.ts": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
   "rewrites": [
-    {
-      "source": "/api/trpc/:path*",
-      "destination": "/api/trpc"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/trpc/:path*", "destination": "/api/trpc" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
