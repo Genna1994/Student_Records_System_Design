@@ -3,13 +3,19 @@
   "outputDirectory": "dist",
   "framework": null,
   "functions": {
-    "functions/trpc.ts": {
+    "api/trpc.ts": {
       "memory": 1024,
       "maxDuration": 30
     }
   },
   "rewrites": [
-    { "source": "/api/trpc/:path*", "destination": "/functions/trpc" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/api/trpc/:path*",
+      "destination": "/api/trpc"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }
