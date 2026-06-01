@@ -9,9 +9,9 @@ const db = getDb();
 
 const COURSE_CATALOG = [
   // ── Computer Science (CS) ───────────────────────────────────────────────────
-  { courseCode: "CS-101", title: "Intro to Programming",                  credits: 4, department: "CS",  yearLevel: 1, description: "Fundamentals of programming using Python" },
-  { courseCode: "CS-102", title: "Web Development Basics",                credits: 3, department: "CS",  yearLevel: 1, description: "HTML, CSS, and JavaScript fundamentals" },
-  { courseCode: "CS-103", title: "Computer Science Foundations",          credits: 3, department: "CS",  yearLevel: 1, description: "Boolean logic, number systems, and computational thinking" },
+  { courseCode: "CS-101", title: "Intro to Programming, Web Development Basics, Computer Science Foundations",                  credits: 4, department: "CS",  yearLevel: 1, description: "Fundamentals of programming using Python" },
+  { courseCode: "CS-102", title: "Intro to Programming, Web Development Basics, Computer Science Foundations",                credits: 3, department: "CS",  yearLevel: 1, description: "HTML, CSS, and JavaScript fundamentals" },
+  { courseCode: "CS-103", title: "Intro to Programming, Web Development Basics, Computer Science Foundations",          credits: 3, department: "CS",  yearLevel: 1, description: "Boolean logic, number systems, and computational thinking" },
   { courseCode: "CS-201", title: "Data Structures",                       credits: 4, department: "CS",  yearLevel: 2, description: "Arrays, linked lists, trees, graphs, hashing" },
   { courseCode: "CS-202", title: "Algorithms",                            credits: 3, department: "CS",  yearLevel: 2, description: "Algorithm design, analysis, and complexity" },
   { courseCode: "CS-203", title: "Object-Oriented Programming",           credits: 3, department: "CS",  yearLevel: 2, description: "OOP principles using Java" },
