@@ -25,15 +25,15 @@ export function getDb() {
   // Use a single connection (not a pool) for serverless environments.
   // Pools keep connections open between invocations and exhaust Railway's limit.
   const connection = mysql.createPool({
-    uri: databaseUrl,
-    ssl: { rejectUnauthorized: false },
-    // Serverless-safe pool settings: small pool, short idle timeout
-    waitForConnections: true,
-    connectionLimit: 3,
-    idleTimeout: 60000,    // release idle connections after 60s
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
-  });
+  uri: databaseUrl,
+  ssl: { rejectUnauthorized: false },
+  waitForConnections: true,
+  connectionLimit: 1,           // single connection for serverless
+  connectTimeout: 30000,        // 30 second connect timeout
+  idleTimeout: 60000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+});
 
   instance = drizzle(connection, {
     schema: fullSchema,
