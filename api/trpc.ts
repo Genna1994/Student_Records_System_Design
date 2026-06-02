@@ -4,7 +4,7 @@ import { createContext } from "./context";
 
 export const config = {
   runtime: "nodejs20.x",
-  maxDuration: 60,          // increased from 30 to 60
+  maxDuration: 60,
 };
 
 export default async function handler(req: Request): Promise<Response> {
@@ -40,7 +40,6 @@ export default async function handler(req: Request): Promise<Response> {
       headers,
     });
   } catch (err) {
-    // Return proper JSON error instead of letting Vercel return HTML
     console.error("[handler crash]", err);
     return new Response(
       JSON.stringify({ error: "Internal server error", detail: String(err) }),
