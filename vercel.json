@@ -1,13 +1,7 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "vite build && node build-api.mjs",
   "outputDirectory": "dist",
   "framework": null,
-  "functions": {
-    "api/trpc.ts": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  },
   "rewrites": [
     {
       "source": "/api/trpc/:path*",
