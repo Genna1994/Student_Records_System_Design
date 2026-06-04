@@ -10,15 +10,11 @@ await build({
   bundle: true,
   platform: "node",
   target: "node20",
-  format: "esm",
-  external: ["mysql2"],
+  format: "cjs",
   alias: {
     "@db": resolve(__dirname, "db"),
     "@contracts": resolve(__dirname, "contracts"),
     "@": resolve(__dirname, "src"),
-  },
-  banner: {
-    js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
   },
   logLevel: "info",
 });
