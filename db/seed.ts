@@ -67,7 +67,7 @@ const COURSE_CATALOG = [
   // ── Information Technology (IT) ─────────────────────────────────────────────
   { courseCode: "IT-101",  title: "IT Fundamentals, Networking Essentials, Introduction to Cybersecurity",                      credits: 3, department: "IT",  yearLevel: 1, description: "Computer hardware, software, operating systems, and IT support basics" },
   { courseCode: "IT-102",  title: "IT Fundamentals, Networking Essentials, Introduction to Cybersecurity",                credits: 3, department: "IT",  yearLevel: 1, description: "OSI model, TCP/IP, subnetting, and basic network configuration" },
-  { courseCode: "IT-103",  title: "",        credits: 3, department: "IT",  yearLevel: 1, description: "Threats, vulnerabilities, and foundational security controls" },
+  { courseCode: "IT-103",  title: "IT Fundamentals, Networking Essentials, Introduction to Cybersecurity",        credits: 3, department: "IT",  yearLevel: 1, description: "Threats, vulnerabilities, and foundational security controls" },
   { courseCode: "IT-201",  title: "Systems Administration",               credits: 3, department: "IT",  yearLevel: 2, description: "Linux and Windows server configuration, user management, and automation scripts" },
   { courseCode: "IT-202",  title: "Database Administration",              credits: 3, department: "IT",  yearLevel: 2, description: "Installation, tuning, backup, and recovery of relational database systems" },
   { courseCode: "IT-203",  title: "Cloud Infrastructure",                 credits: 3, department: "IT",  yearLevel: 2, description: "Provisioning and managing cloud resources on AWS and Azure platforms" },
