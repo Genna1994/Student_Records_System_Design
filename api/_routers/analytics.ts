@@ -1,6 +1,6 @@
-import { createRouter, publicQuery } from "../middleware";
-import { getDb } from "../queries/connection";
-import { students, courses, enrollments } from "@db/schema";
+import { createRouter, publicQuery } from "../_middleware";
+import { getDb } from "../_queries/connection";
+import { students, courses, enrollments } from "../../db/schema";
 import { eq, count, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 

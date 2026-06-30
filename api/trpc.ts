@@ -1,6 +1,6 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "./router";
-import { createContext } from "./context";
+import { appRouter } from "./_router";
+import { createContext } from "./_context";
  
 export const config = {
   maxDuration: 60,

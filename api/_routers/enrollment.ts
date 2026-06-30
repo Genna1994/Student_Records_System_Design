@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "../middleware";
-import { getDb } from "../queries/connection";
+import { createRouter, publicQuery } from "../_middleware";
+import { getDb } from "../_queries/connection";
 import { enrollments, courses, students, prerequisites } from "../../db/schema";
 import { eq, and, count, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";

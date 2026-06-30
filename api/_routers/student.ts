@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "../middleware";
-import { getDb } from "../queries/connection";
+import { createRouter, publicQuery } from "../_middleware";
+import { getDb } from "../_queries/connection";
 import { students, enrollments, courses } from "../../db/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 

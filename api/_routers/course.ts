@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { createRouter, publicQuery } from "../middleware";
-import { getDb } from "../queries/connection";
-import { courses, prerequisites, enrollments, students } from "@db/schema";
+import { createRouter, publicQuery } from "../_middleware";
+import { getDb } from "../_queries/connection";
+import { courses, prerequisites, enrollments, students } from "../../db/schema";
 import { eq, and, like, count, desc } from "drizzle-orm";
 
 export const courseRouter = createRouter({
